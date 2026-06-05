@@ -4,29 +4,53 @@ import type {
   StoreOrder, StoreProduct, CartItem,
 } from '../types';
 
-const BASE = '/api';
+const BASE    = '/api';
+const TIMEOUT = 15_000; // 15 segundos
 
-async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-
-  const res = await fetch(`${BASE}${path}`, {
-    method,
-    headers,
-    credentials: 'include',
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || `Erro ${res.status} na API`);
+class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
   }
-  return res.json();
 }
 
-const get   = <T>(path: string)                => req<T>('GET',    path);
-const post  = <T>(path: string, body: unknown) => req<T>('POST',   path, body);
-const put   = <T>(path: string, body: unknown) => req<T>('PUT',    path, body);
+async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT);
+
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+
+    const res = await fetch(`${BASE}${path}`, {
+      method,
+      headers,
+      credentials: 'include',
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new ApiError(res.status, err.error || `Erro ${res.status} na API`);
+    }
+
+    return res.json();
+  } catch (e) {
+    if (e instanceof ApiError) throw e;
+    if ((e as Error).name === 'AbortError') {
+      throw new ApiError(408, 'A requisição demorou demais. Verifique sua conexão.');
+    }
+    throw new ApiError(0, (e as Error).message || 'Erro de rede desconhecido.');
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const get   = <T>(path: string)                 => req<T>('GET',    path);
+const post  = <T>(path: string, body: unknown)  => req<T>('POST',   path, body);
+const put   = <T>(path: string, body: unknown)  => req<T>('PUT',    path, body);
 const patch = <T>(path: string, body?: unknown) => req<T>('PATCH',  path, body);
-const del   = (path: string)                   => req<void>('DELETE', path);
+const del   = (path: string)                    => req<void>('DELETE', path);
 
 // ── Auth ───────────────────────────────────────────────────────
 export const authApi = {
@@ -125,7 +149,6 @@ export const contactApi = {
 export const bookingApi = {
   getAll:       ()                             => get<BookingRequest[]>('/booking-requests'),
   create:       (data: Omit<BookingRequest, 'id' | 'createdAt' | 'status'>) => post<BookingRequest>('/booking-requests', data),
-
   updateStatus: (id: string, status: string)   => patch<{ success: boolean }>(`/booking-requests/${id}/status`, { status }),
 };
 
@@ -149,3 +172,5 @@ export const siteContentApi = {
   getSection:    (section: string)                           => get<Partial<SiteContent>>(`/site-content/${section}`),
   updateSection: (section: keyof SiteContent, data: Partial<SiteContent[keyof SiteContent]>) => put<{ success: boolean }>(`/site-content/${section}`, data),
 };
+
+export { ApiError };

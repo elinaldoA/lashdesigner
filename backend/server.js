@@ -2,6 +2,8 @@ const express      = require('express');
 const cors         = require('cors');
 const path         = require('path');
 const helmet       = require('helmet');
+const compression  = require('compression');
+const morgan       = require('morgan');
 const cookieParser = require('cookie-parser');
 const rateLimit    = require('./middleware/rateLimit');
 require('dotenv').config();
@@ -11,6 +13,9 @@ const PORT = process.env.PORT || 3001;
 const isProd = process.env.NODE_ENV === 'production';
 
 // ─── Middlewares ──────────────────────────────────────────────
+app.use(compression());
+app.use(morgan(isProd ? 'combined' : 'dev'));
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -86,7 +91,15 @@ app.use('/api/store',            require('./routes/storePublic'));
 app.use('/api/store-orders',     require('./routes/storeOrders'));
 
 // ─── Health check ─────────────────────────────────────────────
-app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
+const db = require('./db');
+app.get('/api/health', async (_, res) => {
+  try {
+    await db.query('SELECT 1');
+    res.json({ status: 'ok', db: 'connected' });
+  } catch {
+    res.status(503).json({ status: 'degraded', db: 'unreachable' });
+  }
+});
 
 // ─── Serve frontend em produção ───────────────────────────────
 if (isProd) {

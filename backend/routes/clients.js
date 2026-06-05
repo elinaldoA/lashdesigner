@@ -2,6 +2,7 @@ const router      = require('express').Router();
 const db          = require('../db');
 const { v4: uuid } = require('uuid');
 const requireAuth  = require('../middleware/requireAuth');
+const requireRole  = require('../middleware/requireRole');
 const audit        = require('../utils/audit');
 
 router.use(requireAuth);
@@ -61,7 +62,7 @@ router.put('/:id', async (req, res) => {
   } catch (e) { console.error(e); res.status(500).json({ error: 'Erro interno do servidor.' }); }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireRole('admin'), async (req, res) => {
   try {
     await audit(req.adminUser, 'DELETE', 'clients', req.params.id);
     await db.query('DELETE FROM clients WHERE id = ?', [req.params.id]);

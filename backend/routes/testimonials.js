@@ -1,7 +1,10 @@
-const router      = require('express').Router();
-const db          = require('../db');
-const { v4: uuid } = require('uuid');
-const requireAuth  = require('../middleware/requireAuth');
+const router        = require('express').Router();
+const db            = require('../db');
+const { v4: uuid }  = require('uuid');
+const requireAuth   = require('../middleware/requireAuth');
+const sanitizeHtml  = require('sanitize-html');
+
+const sanitizeText = (str) => sanitizeHtml(str, { allowedTags: [], allowedAttributes: {} });
 
 function mapT(r) {
   return {
@@ -27,10 +30,12 @@ router.post('/', requireAuth, async (req, res) => {
     }
 
     const { photo, date, approved = false, source = 'manual' } = req.body;
+    const cleanName = sanitizeText(clientName);
+    const cleanText = sanitizeText(text);
     const id = uuid();
     await db.query(
       `INSERT INTO testimonials (id, client_name, photo, text, rating, date, approved, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, clientName, photo || null, text, rating, date || null, approved ? 1 : 0, source]
+      [id, cleanName, photo || null, cleanText, rating, date || null, approved ? 1 : 0, source]
     );
     const [rows] = await db.query('SELECT * FROM testimonials WHERE id = ?', [id]);
     res.status(201).json(mapT(rows[0]));
@@ -45,9 +50,11 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
 
     const { photo, date, approved } = req.body;
+    const cleanName = sanitizeText(clientName);
+    const cleanText = sanitizeText(text);
     await db.query(
       `UPDATE testimonials SET client_name=?, photo=?, text=?, rating=?, date=?, approved=? WHERE id=?`,
-      [clientName, photo || null, text, rating, date || null, approved ? 1 : 0, req.params.id]
+      [cleanName, photo || null, cleanText, rating, date || null, approved ? 1 : 0, req.params.id]
     );
     const [rows] = await db.query('SELECT * FROM testimonials WHERE id = ?', [req.params.id]);
     res.json(mapT(rows[0]));

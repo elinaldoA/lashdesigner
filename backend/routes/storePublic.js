@@ -1,6 +1,9 @@
 const router       = require('express').Router();
 const db           = require('../db');
 const { v4: uuid } = require('uuid');
+const rateLimit    = require('../middleware/rateLimit');
+
+const orderLimit = rateLimit({ windowMs: 60_000, max: 10, message: 'Muitos pedidos enviados. Aguarde 1 minuto.' });
 
 // GET /api/store/products — produtos visíveis na loja (sem autenticação)
 router.get('/products', async (req, res) => {
@@ -13,7 +16,7 @@ router.get('/products', async (req, res) => {
 });
 
 // POST /api/store/orders — criar pedido (sem autenticação)
-router.post('/orders', async (req, res) => {
+router.post('/orders', orderLimit, async (req, res) => {
   const conn = await db.getConnection();
   try {
     const { customerName, customerEmail, customerPhone, customerAddress, items, paymentMethod, notes } = req.body;
@@ -68,7 +71,7 @@ router.post('/orders', async (req, res) => {
 
     const subtotal = resolvedItems.reduce((sum, i) => sum + parseFloat(i.price) * i.quantity, 0);
     const shipping = 0;
-    const discount = 0;
+    const discount = paymentMethod === 'pix' ? Math.round(subtotal * 0.05 * 100) / 100 : 0;
     const total = subtotal + shipping - discount;
 
     const orderId = uuid();

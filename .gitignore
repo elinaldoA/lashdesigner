@@ -14,6 +14,10 @@ backend/.env
 backend/.env.local
 backend/.env.*.local
 
+# SQL sensível — schema e migrações ficam fora do repositório público
+backend/schema.sql
+backend/migrate_store.sql
+
 # Logs
 *.log
 npm-debug.log*

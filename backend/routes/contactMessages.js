@@ -1,8 +1,11 @@
-const router      = require('express').Router();
-const db          = require('../db');
-const { v4: uuid } = require('uuid');
-const requireAuth  = require('../middleware/requireAuth');
-const rateLimit    = require('../middleware/rateLimit');
+const router        = require('express').Router();
+const db            = require('../db');
+const { v4: uuid }  = require('uuid');
+const requireAuth   = require('../middleware/requireAuth');
+const rateLimit     = require('../middleware/rateLimit');
+const sanitizeHtml  = require('sanitize-html');
+
+const sanitizeText = (str) => sanitizeHtml(str, { allowedTags: [], allowedAttributes: {} });
 
 const contactLimit = rateLimit({ windowMs: 60_000, max: 5, message: 'Muitas mensagens enviadas. Aguarde 1 minuto.' });
 
@@ -30,10 +33,13 @@ router.post('/', contactLimit, async (req, res) => {
     if (email && !/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email.trim())) {
       return res.status(400).json({ error: 'Email inválido.' });
     }
+    const cleanName    = sanitizeText(name.trim());
+    const cleanMessage = sanitizeText(message.trim());
+    const cleanPhone   = phone?.trim() || null;
     const id = uuid();
     await db.query('INSERT INTO contact_messages (id, name, email, phone, message) VALUES (?, ?, ?, ?, ?)',
-      [id, name.trim(), email?.trim() || null, phone?.trim() || null, message.trim()]);
-    res.status(201).json({ id, name, email, phone, message, read: false, createdAt: new Date() });
+      [id, cleanName, email?.trim() || null, cleanPhone, cleanMessage]);
+    res.status(201).json({ id, name: cleanName, email, phone: cleanPhone, message: cleanMessage, read: false, createdAt: new Date() });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Erro interno do servidor.' }); }
 });
 

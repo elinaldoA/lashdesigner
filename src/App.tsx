@@ -1,30 +1,40 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useStore } from './shared/store/useStore';
+import ErrorBoundary from './shared/components/ErrorBoundary';
 
-// Admin pages
-import AdminLayout from './admin/components/AdminLayout';
-import LoginPage from './admin/pages/Login/LoginPage';
-import Dashboard from './admin/pages/Dashboard/Dashboard';
-import AppointmentsPage from './admin/pages/Appointments/AppointmentsPage';
-import ClientsPage from './admin/pages/Clients/ClientsPage';
-import ProductsPage from './admin/pages/Products/ProductsPage';
-import SalesPage from './admin/pages/Sales/SalesPage';
-import CashFlowPage from './admin/pages/CashFlow/CashFlowPage';
-import ReportsPage from './admin/pages/Reports/ReportsPage';
-import WebsiteManagerPage from './admin/pages/WebsiteManager/WebsiteManagerPage';
-import StoreOrdersPage from './admin/pages/StoreOrders/StoreOrdersPage';
+// Admin pages — lazy loaded
+const AdminLayout        = lazy(() => import('./admin/components/AdminLayout'));
+const LoginPage          = lazy(() => import('./admin/pages/Login/LoginPage'));
+const Dashboard          = lazy(() => import('./admin/pages/Dashboard/Dashboard'));
+const AppointmentsPage   = lazy(() => import('./admin/pages/Appointments/AppointmentsPage'));
+const ClientsPage        = lazy(() => import('./admin/pages/Clients/ClientsPage'));
+const ProductsPage       = lazy(() => import('./admin/pages/Products/ProductsPage'));
+const SalesPage          = lazy(() => import('./admin/pages/Sales/SalesPage'));
+const CashFlowPage       = lazy(() => import('./admin/pages/CashFlow/CashFlowPage'));
+const ReportsPage        = lazy(() => import('./admin/pages/Reports/ReportsPage'));
+const WebsiteManagerPage = lazy(() => import('./admin/pages/WebsiteManager/WebsiteManagerPage'));
+const StoreOrdersPage    = lazy(() => import('./admin/pages/StoreOrders/StoreOrdersPage'));
 
-// Site pages
-import SiteLayout from './site/components/SiteLayout';
-import HomePage from './site/pages/Home/HomePage';
-import ServicesPage from './site/pages/Services/ServicesPage';
-import AboutPage from './site/pages/About/AboutPage';
-import GalleryPage from './site/pages/Gallery/GalleryPage';
-import TestimonialsPage from './site/pages/Testimonials/TestimonialsPage';
-import ContactPage from './site/pages/Contact/ContactPage';
-import BookingPage from './site/pages/Booking/BookingPage';
-import StorePage from './site/pages/Store/StorePage';
+// Site pages — lazy loaded
+const SiteLayout      = lazy(() => import('./site/components/SiteLayout'));
+const HomePage        = lazy(() => import('./site/pages/Home/HomePage'));
+const ServicesPage    = lazy(() => import('./site/pages/Services/ServicesPage'));
+const AboutPage       = lazy(() => import('./site/pages/About/AboutPage'));
+const GalleryPage     = lazy(() => import('./site/pages/Gallery/GalleryPage'));
+const TestimonialsPage= lazy(() => import('./site/pages/Testimonials/TestimonialsPage'));
+const ContactPage     = lazy(() => import('./site/pages/Contact/ContactPage'));
+const BookingPage     = lazy(() => import('./site/pages/Booking/BookingPage'));
+const StorePage       = lazy(() => import('./site/pages/Store/StorePage'));
+const NotFoundPage    = lazy(() => import('./site/pages/NotFound/NotFoundPage'));
+
+function PageLoader() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-50 to-rose-50">
+      <div className="w-10 h-10 border-4 border-pink-200 border-t-pink-500 rounded-full animate-spin" />
+    </div>
+  );
+}
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useStore(s => s.isAuthenticated);
@@ -42,7 +52,6 @@ function AppLoader({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     checkAuth().then(isAuth => {
-      // Se autenticado carrega tudo; caso contrário, só dados públicos
       if (isAuth) loadAll();
       else loadPublicData();
     });
@@ -118,36 +127,43 @@ function AppLoader({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppLoader>
-        <Routes>
-          {/* Site institucional */}
-          <Route path="/" element={<SiteLayout />}>
-            <Route index element={<HomePage />} />
-            <Route path="servicos" element={<ServicesPage />} />
-            <Route path="sobre" element={<AboutPage />} />
-            <Route path="galeria" element={<GalleryPage />} />
-            <Route path="depoimentos" element={<TestimonialsPage />} />
-            <Route path="contato" element={<ContactPage />} />
-            <Route path="agendamento" element={<BookingPage />} />
-            <Route path="loja" element={<StorePage />} />
-          </Route>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AppLoader>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              {/* Site institucional */}
+              <Route path="/" element={<SiteLayout />}>
+                <Route index element={<HomePage />} />
+                <Route path="servicos" element={<ServicesPage />} />
+                <Route path="sobre" element={<AboutPage />} />
+                <Route path="galeria" element={<GalleryPage />} />
+                <Route path="depoimentos" element={<TestimonialsPage />} />
+                <Route path="contato" element={<ContactPage />} />
+                <Route path="agendamento" element={<BookingPage />} />
+                <Route path="loja" element={<StorePage />} />
+              </Route>
 
-          {/* Admin */}
-          <Route path="/admin/login" element={<LoginPage />} />
-          <Route path="/admin" element={<PrivateRoute><AdminLayout /></PrivateRoute>}>
-            <Route index element={<Dashboard />} />
-            <Route path="agendamentos" element={<AppointmentsPage />} />
-            <Route path="clientes" element={<ClientsPage />} />
-            <Route path="produtos" element={<ProductsPage />} />
-            <Route path="vendas" element={<SalesPage />} />
-            <Route path="fluxo-caixa" element={<CashFlowPage />} />
-            <Route path="relatorios" element={<ReportsPage />} />
-            <Route path="pedidos" element={<StoreOrdersPage />} />
-            <Route path="website/*" element={<WebsiteManagerPage />} />
-          </Route>
-        </Routes>
-      </AppLoader>
-    </BrowserRouter>
+              {/* Admin */}
+              <Route path="/admin/login" element={<LoginPage />} />
+              <Route path="/admin" element={<PrivateRoute><AdminLayout /></PrivateRoute>}>
+                <Route index element={<Dashboard />} />
+                <Route path="agendamentos" element={<AppointmentsPage />} />
+                <Route path="clientes" element={<ClientsPage />} />
+                <Route path="produtos" element={<ProductsPage />} />
+                <Route path="vendas" element={<SalesPage />} />
+                <Route path="fluxo-caixa" element={<CashFlowPage />} />
+                <Route path="relatorios" element={<ReportsPage />} />
+                <Route path="pedidos" element={<StoreOrdersPage />} />
+                <Route path="website/*" element={<WebsiteManagerPage />} />
+              </Route>
+
+              {/* 404 */}
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Suspense>
+        </AppLoader>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
