@@ -1,0 +1,38 @@
+{
+  "name": "lash-designer",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n \"API,WEB\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm run backend\" \"vite\"",
+    "backend": "cd backend && node server.js",
+    "build": "tsc --noEmit && vite build",
+    "start": "cd backend && node server.js",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.0",
+    "zustand": "^4.5.4",
+    "react-hook-form": "^7.52.1",
+    "zod": "^3.23.8",
+    "@hookform/resolvers": "^3.9.0",
+    "date-fns": "^3.6.0",
+    "recharts": "^2.12.7",
+    "lucide-react": "^0.414.0",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.4.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.40",
+    "tailwindcss": "^3.4.7",
+    "concurrently": "^9.1.0"
+  }
+}
